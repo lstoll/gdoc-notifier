@@ -1,0 +1,4 @@
+cron:
+- description: poll for doc changes
+  url: /poller/
+  schedule: every 1 hours
