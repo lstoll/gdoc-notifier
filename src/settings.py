@@ -1,4 +1,5 @@
 import os
+import sys
 from ragendja.settings_pre import *
 
 DEBUG=True
@@ -34,6 +35,8 @@ ROOT_PATH = os.path.dirname(__file__)
 TEMPLATE_DIRS = (
     ROOT_PATH + '/app/templates',
 )
+# add the lib dir to the system path, so we can import
+sys.path.append(ROOT_PATH + '/lib')
 
 SECRET_KEY = 'AABCDGFS'
 
