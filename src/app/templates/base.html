@@ -1,0 +1,17 @@
+<html>
+<head>
+	<title>{% block title %}GDoc Notifier{% endblock %}</title>
+	<!-- Framework CSS -->
+	<link rel="stylesheet" href="/static/css/blueprint/screen.css" type="text/css" media="screen, projection">
+	<!--[if lt IE 8]><link rel="stylesheet" href="/static/css/blueprint/ie.css" type="text/css" media="screen, projection"><![endif]-->
+	{% block extrahead %}{% endblock %}
+</head>
+<body>
+	<div class="container" style="padding-top: 20px;"><!-- inline CSS is evil -->
+	  <div class="span-4">&nbsp;</div>
+    <div class="span-16">
+	    {% block content %}{% endblock %}
+    </div>
+	</div>
+</body>
+</html>
