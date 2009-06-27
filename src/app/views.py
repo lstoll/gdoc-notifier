@@ -9,14 +9,16 @@ from app.models import *
 import gdata.service
 import gdata.alt.appengine
 from gdata.auth import AuthSubToken
-from gdata.docs.service import DocumentQuery
+from gdata.docs.service import *
 from gdata.service import NonAuthSubToken
+from gdata.service import RequestError
 import logging
+from app.gdata_token_store import TokenStore
 
 @login_required # Registerd google user requried
 #@staff_only # App developer/admin required
 def index(request):
-  client = gdata_client()
+  client = gdata_client(request.user)
   if not validate_users_authsub_token(request.user):
     # no token, send to link to generate
     return_url = request.build_absolute_uri('/authsub_return/')
@@ -26,14 +28,16 @@ def index(request):
   
   q = DocumentQuery(categories=['document'])
   logging.debug(q.ToUri())
-  feed = client.GetFeed('http://docs.google.com' + q.ToUri())
+  feed = client.GetDocumentListFeed(q.ToUri())
+  for entry in feed.entry:
+    logging.debug(entry.updated)
   return HttpResponse(feed)
   #return render_to_response('index.html')
   
+@login_required
 def authsub_return(request):
   """Processes return for authsub request"""
-  client = gdata.service.GDataService()
-  gdata.alt.appengine.run_on_appengine(client)
+  client = gdata_client(request.user)
   
   session_token = None
   auth_token = gdata.auth.extract_auth_sub_token_from_url(request.get_full_path())
@@ -51,17 +55,22 @@ def authsub_return(request):
   
 def validate_users_authsub_token(user):
   """Validates the given users authsub token"""
-  client = gdata_client()
+  client = gdata_client(user)
   try:
     # Catching the exception should be enough to detect expiry.
     info = client.AuthSubTokenInfo()
     return True
   except NonAuthSubToken:
     return False
+  except RequestError:
+    # todo if error.status = 403 we need a new token, else transient and handle so.
+    return False
     
-def gdata_client():
-  client = gdata.service.GDataService(service='writely')
+def gdata_client(user):
+  """Gets a GDATA client"""
+  client = DocsService()
   gdata.alt.appengine.run_on_appengine(client)
+  client.token_store = TokenStore(user)
   return client
     
 
