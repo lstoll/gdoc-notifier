@@ -1,0 +1,2 @@
+- Handle the doc checks a little better - don't check the same doc multiple
+  times for each user. It's OK now, as I'm the only user.

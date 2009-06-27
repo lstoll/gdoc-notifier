@@ -8,7 +8,8 @@ from ragendja.auth.urls import urlpatterns as auth_patterns
 
 urlpatterns = auth_patterns + patterns('',
     (r'^$', 'app.views.index'),
-    (r'^authsub_return/', 'app.views.authsub_return')
+    (r'^authsub_return/', 'app.views.authsub_return'),
+    (r'^poller/', 'app.views.poller'),
     
     # Example:
     # (r'^tetherme_django/', include('tetherme_django.foo.urls')),
