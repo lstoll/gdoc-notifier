@@ -52,7 +52,17 @@ def poller(request):
   for user in User.all().fetch(1000):
     # check if their authsub token is OK. if not, mail them.
     if not validate_users_authsub_token(request.user):
-      #email them to visit site to re-auth
+      message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
+                                  subject="Authentication key not working")
+
+      message.to = user.email
+      message.body = """
+      Hi, Your authentication key isn't working. Please visit to following link to re-activate:
+
+      %s
+      """ % (request.build_absolute_uri('/'))
+
+      message.send()
       break
     # get all their documents
     client = gdata_client(user)
