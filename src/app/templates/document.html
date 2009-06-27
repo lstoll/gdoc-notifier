@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{doc.title}}</h1>
+    {% if message %}
+			<div class="error">{{message}}</div>
+		{% endif %}
+    <h3>Users being Notified:</h3>
+      <table>
+      {% for email in notify %}
+        <tr>
+     	    <td>{{email}}</td>
+     	    <td><a href="{{url}}?remove={{email}}">Remove</a></td>
+     	  </tr>
+       {% endfor %}
+       </table>
+       <form action="{{url}}" method="GET">
+       <fieldset>
+         <legend>Add user to notify</legend>
+         <p><label for="email">Email:</label><br>
+             <input type="text" class="" name="email" id="email" value=""></p>
+         <p><input type="submit" value="Add"></p>
+   		</fieldset>
+{% endblock %}

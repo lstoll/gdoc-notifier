@@ -1,6 +1,20 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Home Page</h1>
-    <p>This is the home page</p>
+    <h1>Documents</h1>
+    <table>
+      <thead>
+        <td>Title</td>
+        <td>Author Email</td>
+        <td>Last Updated</td>
+        <td></td>
+      {% for doc in documents %}
+        <tr>
+     	    <td><a href="/document/{{doc.key}}">{{doc.title}}</a></td>
+     	    <td>{{doc.author_email}}</td>
+     	    <td>{{doc.last_updated}}</td>
+     	    <td><a href="{{doc.link}}">View</a></td>
+     	  </tr>
+       {% endfor %}
+     <table>
 {% endblock %}

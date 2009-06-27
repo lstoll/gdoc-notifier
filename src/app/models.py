@@ -13,3 +13,4 @@ class Document(db.Model):
     doc_id = db.StringProperty(required=True)
     title = db.StringProperty(required=True)
     last_updated = db.DateTimeProperty(required=True)
+    notify = db.StringListProperty()

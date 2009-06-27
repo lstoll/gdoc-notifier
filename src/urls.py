@@ -10,6 +10,7 @@ urlpatterns = auth_patterns + patterns('',
     (r'^$', 'app.views.index'),
     (r'^authsub_return/', 'app.views.authsub_return'),
     (r'^poller/', 'app.views.poller'),
+    (r'^document/(.*)', 'app.views.document'),
     
     # Example:
     # (r'^tetherme_django/', include('tetherme_django.foo.urls')),

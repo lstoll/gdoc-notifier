@@ -16,6 +16,7 @@ import logging
 from app.gdata_token_store import TokenStore
 import iso8601
 from google.appengine.api import mail
+from urllib import urlencode
 
 @login_required # Registerd google user requried
 #@staff_only # App developer/admin required
@@ -27,7 +28,11 @@ def index(request):
     url = client.GenerateAuthSubURL(return_url,
           ('http://docs.google.com/feeds/',), secure=False, session=True, domain='lstoll.net') #TODO - domain configurable?
     return HttpResponseRedirect(url)
-  return render_to_response('index.html')
+    
+  # we have a keyed user. list docs
+  docs = Document.all().filter("user =", request.user).fetch(1000)
+  c = {'documents': docs}
+  return render_to_response('index.html', c)
   
 @login_required
 def authsub_return(request):
@@ -45,6 +50,25 @@ def authsub_return(request):
   else:
     # TODO Error somewhere - handle better
     return HttpResponse("<h1>token not saved..</h1><a href=\"/\">try again</a>")
+    
+@login_required
+def document(request, document_id):
+  url = request.build_absolute_uri(request.path) # not URI, so we strip query strings.
+  doc = db.get(db.Key(document_id))
+  
+  message = request.REQUEST.get('message', False)
+  if 'email' in request.REQUEST:
+    if request.REQUEST['email'] == '':
+      return HttpResponseRedirect(url + '?message=' + urlencode('Must provide an email address to add'))
+    doc.notify.append(request.REQUEST['email'])
+    doc.put()
+  if 'remove' in request.REQUEST:
+    doc.notify.remove(request.REQUEST['remove'])
+    doc.put()
+  
+  c = {'doc': doc, 'notify':doc.notify, 'url': url}
+  return render_to_response('document.html', c)
+  
   
 @staff_only
 def poller(request):
@@ -85,7 +109,7 @@ def poller(request):
           message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
                                       subject="Document %s has been updated" % (docs[0].title))
 
-          message.to = user.email
+          message.to = docs[0].notify
           message.body = """
           Document '%s' has been updated in the last hour. To view:
 
@@ -97,13 +121,13 @@ def poller(request):
         # if new, send notification, and save
         doc = Document(doc_id = entry.id.text, user=user, author_email=entry.author[0].email.text,
               last_updated=last_updated, link = entry.GetHtmlLink().href,
-              title=entry.title.text)
+              title=entry.title.text, notify=[user.email])
         doc.put()
         #email
         message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
                                     subject="Document %s has been added" % (doc.title))
 
-        message.to = user.email
+        message.to = doc.notify
         message.body = """
         Document '%s' has been added. To view:
 
