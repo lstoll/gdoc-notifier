@@ -102,21 +102,22 @@ def poller(request):
         # if existing, and modified differs, update and send mail
         if last_updated > docs[0].last_updated:
           # updated
-          docs[0].last_updated = last_updated
-          docs[0].title = entry.title.text
-          docs[0].put()
-          # send mail.
-          message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
-                                      subject="Document %s has been updated" % (docs[0].title))
+          if len(docs[0].notify > 0) #only notify if there are people to notify!
+            docs[0].last_updated = last_updated
+            docs[0].title = entry.title.text
+            docs[0].put()
+            # send mail.
+            message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
+                                        subject="Document %s has been updated" % (docs[0].title))
 
-          message.to = docs[0].notify
-          message.body = """
-          Document '%s' has been updated in the last hour. To view:
+            message.to = docs[0].notify
+            message.body = """
+            Document '%s' has been updated in the last hour. To view:
 
-          %s
-          """ % (docs[0].title, docs[0].link)
+            %s
+            """ % (docs[0].title, docs[0].link)
 
-          message.send()
+            message.send()
       else:
         # if new, send notification, and save
         doc = Document(doc_id = entry.id.text, user=user, author_email=entry.author[0].email.text,
