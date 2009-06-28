@@ -102,7 +102,7 @@ def poller(request):
         # if existing, and modified differs, update and send mail
         if last_updated > docs[0].last_updated:
           # updated
-          if len(docs[0].notify > 0) #only notify if there are people to notify!
+          if len(docs[0].notify > 0): #only notify if there are people to notify!
             docs[0].last_updated = last_updated
             docs[0].title = entry.title.text
             docs[0].put()
