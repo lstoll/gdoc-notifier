@@ -1,4 +1,5 @@
 application: gdoc-notifier-lstoll
+#application: gdocnotifier
 version: 1
 runtime: python
 api_version: 1
