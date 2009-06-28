@@ -95,29 +95,34 @@ def poller(request):
     q = DocumentQuery(categories=['document'])
     logging.debug(q.ToUri())
     feed = client.GetDocumentListFeed(q.ToUri())
+    retrieved_ids = []
+    documents = {}
+    for document in Document.all().filter("user =", user).fetch(1000):
+      documents[document.doc_id] = document
     for entry in feed.entry:
+      retrieved_ids.append(entry.id.text)
       # Just strip all TZ info, to be consistent.
       last_updated = iso8601.parse_date(entry.updated.text).replace(tzinfo=None)
-      # find the doc in the datastore
-      docs = Document.all().filter("user =", user).filter("doc_id =", entry.id.text).fetch(1)
-      if len(docs) > 0:
+      # see if this doc was in the DB
+      if entry.id.text in documents:
+        doc = documents[entry.id.text]
         # if existing, and modified differs, update and send mail
-        if last_updated > docs[0].last_updated:
+        if last_updated > doc.last_updated:
           # updated
-          if len(docs[0].notify) > 0: #only notify if there are people to notify!
-            docs[0].last_updated = last_updated
-            docs[0].title = entry.title.text
-            docs[0].put()
+          if len(doc.notify) > 0: #only notify if there are people to notify!
+            doc.last_updated = last_updated
+            doc.title = entry.title.text
+            doc.put()
             # send mail.
             message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
-                                        subject="Document %s has been updated" % (docs[0].title))
+                                        subject="Document %s has been updated" % (doc.title))
 
-            message.to = docs[0].notify
+            message.to = doc.notify
             message.body = """
             Document '%s' has been updated in the last hour. To view:
 
             %s
-            """ % (docs[0].title, docs[0].link)
+            """ % (doc.title, doc.link)
 
             message.send()
       else:
@@ -126,6 +131,7 @@ def poller(request):
               last_updated=last_updated, link = entry.GetHtmlLink().href,
               title=entry.title.text, notify=[user.email])
         doc.put()
+        documents[doc.doc_id] = doc
         #email
         message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
                                     subject="Document %s has been added" % (doc.title))
@@ -138,6 +144,26 @@ def poller(request):
         """ % (doc.title, doc.link)
 
         message.send()
+    # Reconcile docs list, delete if no longer there, and notify.
+    for doc_id in documents:
+      if doc_id not in retrieved_ids:
+        # doc wasn't on server
+        doc = documents[doc_id]
+        if len(doc.notify) > 0: #only notify if there are people to notify!
+          doc.last_updated = last_updated
+          doc.title = entry.title.text
+          doc.put()
+          # send mail.
+          message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
+                                      subject="Document %s has been deleted" % (doc.title))
+
+          message.to = doc.notify
+          message.body = """
+          Document '%s' has been deleted in the last hour.
+          """ % (doc.title)
+
+          message.send()
+        db.delete(documents[doc_id])
   return HttpResponse("Completed")
     
   
