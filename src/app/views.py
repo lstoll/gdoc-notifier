@@ -62,9 +62,11 @@ def document(request, document_id):
       return HttpResponseRedirect(url + '?message=' + urlencode('Must provide an email address to add'))
     doc.notify.append(request.REQUEST['email'])
     doc.put()
+    return HttpResponseRedirect(url)
   if 'remove' in request.REQUEST:
     doc.notify.remove(request.REQUEST['remove'])
     doc.put()
+    return HttpResponseRedirect(url)
   
   c = {'doc': doc, 'notify':doc.notify, 'url': url}
   return render_to_response('document.html', c)
@@ -102,7 +104,7 @@ def poller(request):
         # if existing, and modified differs, update and send mail
         if last_updated > docs[0].last_updated:
           # updated
-          if len(docs[0].notify > 0): #only notify if there are people to notify!
+          if len(docs[0].notify) > 0: #only notify if there are people to notify!
             docs[0].last_updated = last_updated
             docs[0].title = entry.title.text
             docs[0].put()
