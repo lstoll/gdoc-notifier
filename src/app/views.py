@@ -17,6 +17,7 @@ from app.gdata_token_store import TokenStore
 import iso8601
 from google.appengine.api import mail
 from urllib import urlencode
+from google.appengine.api import users
 
 @login_required # Registerd google user requried
 #@staff_only # App developer/admin required
@@ -72,12 +73,13 @@ def document(request, document_id):
   return render_to_response('document.html', c)
   
   
-@staff_only
 def poller(request):
+  if not users.is_current_user_admin():
+    return HttpResponse("<h1>Unauthorized</h1>")
   # grab each user.
   for user in User.all().fetch(1000):
     # check if their authsub token is OK. if not, mail them.
-    if not validate_users_authsub_token(request.user):
+    if not validate_users_authsub_token(user):
       message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
                                   subject="Authentication key not working")
 
@@ -150,9 +152,6 @@ def poller(request):
         # doc wasn't on server
         doc = documents[doc_id]
         if len(doc.notify) > 0: #only notify if there are people to notify!
-          doc.last_updated = last_updated
-          doc.title = entry.title.text
-          doc.put()
           # send mail.
           message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
                                       subject="Document %s has been deleted" % (doc.title))
