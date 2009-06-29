@@ -19,5 +19,12 @@ handlers:
 - url: /media
   static_dir: _generated_media
 
+# doing this because users.is_current_user_admin() doesn't
+# seem to be good enough for cron.
+- url: /poller
+  login: admin
+  script: common/appenginepatch/main.py
+
+
 - url: /.*
   script: common/appenginepatch/main.py

@@ -1,4 +1,4 @@
 cron:
 - description: poll for doc changes
-  url: /poller/
+  url: /poller
   schedule: every 60 minutes

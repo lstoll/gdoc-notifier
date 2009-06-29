@@ -18,6 +18,13 @@ import iso8601
 from google.appengine.api import mail
 from urllib import urlencode
 from google.appengine.api import users
+# DeadlineExceededError can live in two different places 
+try: 
+  # When deployed 
+  from google.appengine.runtime import DeadlineExceededError 
+except ImportError: 
+  # In the development server 
+  from google.appengine.runtime.apiproxy_errors import DeadlineExceededError
 
 @login_required # Registerd google user requried
 #@staff_only # App developer/admin required
@@ -74,12 +81,13 @@ def document(request, document_id):
   
   
 def poller(request):
-  if not users.is_current_user_admin():
-    return HttpResponse("<h1>Unauthorized</h1>")
+  logging.debug("Starting poll")
   # grab each user.
   for user in User.all().fetch(1000):
+    logging.debug("Polling for user %s" % user.email)
     # check if their authsub token is OK. if not, mail them.
     if not validate_users_authsub_token(user):
+      logging.debug("user %s 's authsub key not verifying" % user.email)
       message = mail.EmailMessage(sender="Docs Notification <lstoll@lstoll.net>",
                                   subject="Authentication key not working")
 
@@ -90,7 +98,7 @@ def poller(request):
       %s
       """ % (request.build_absolute_uri('/'))
 
-      message.send()
+      send_message(message)
       break
     # get all their documents
     client = gdata_client(user)
@@ -100,6 +108,7 @@ def poller(request):
     retrieved_ids = []
     documents = {}
     for document in Document.all().filter("user =", user).fetch(1000):
+      logging.debug("Adding document: %s" % document.doc_id)
       documents[document.doc_id] = document
     for entry in feed.entry:
       retrieved_ids.append(entry.id.text)
@@ -107,10 +116,12 @@ def poller(request):
       last_updated = iso8601.parse_date(entry.updated.text).replace(tzinfo=None)
       # see if this doc was in the DB
       if entry.id.text in documents:
+        logging.debug("Existing document: %s" % entry.id.text)
         doc = documents[entry.id.text]
         # if existing, and modified differs, update and send mail
         if last_updated > doc.last_updated:
           # updated
+          logging.debug("Document: %s has been updated" % entry.id.text)
           if len(doc.notify) > 0: #only notify if there are people to notify!
             doc.last_updated = last_updated
             doc.title = entry.title.text
@@ -126,8 +137,9 @@ def poller(request):
             %s
             """ % (doc.title, doc.link)
 
-            message.send()
+            send_message(message)
       else:
+        logging.debug("Document: %s is new" % entry.id.text)
         # if new, send notification, and save
         doc = Document(doc_id = entry.id.text, user=user, author_email=entry.author[0].email.text,
               last_updated=last_updated, link = entry.GetHtmlLink().href,
@@ -145,10 +157,11 @@ def poller(request):
         %s
         """ % (doc.title, doc.link)
 
-        message.send()
+        send_message(message)
     # Reconcile docs list, delete if no longer there, and notify.
     for doc_id in documents:
       if doc_id not in retrieved_ids:
+        logging.debug("Document: %s has been deleted." % doc_id)
         # doc wasn't on server
         doc = documents[doc_id]
         if len(doc.notify) > 0: #only notify if there are people to notify!
@@ -161,7 +174,7 @@ def poller(request):
           Document '%s' has been deleted in the last hour.
           """ % (doc.title)
 
-          message.send()
+          send_message(message)
         db.delete(documents[doc_id])
   return HttpResponse("Completed")
     
@@ -185,5 +198,16 @@ def gdata_client(user):
   gdata.alt.appengine.run_on_appengine(client)
   client.token_store = TokenStore(user)
   return client
+  
+def send_message(msg, count = 0):
+  """Tries resending a message twice if a deadlineexceeded occurs."""
+  if count > 1:
+    # tried to resend twice. log and give up
+    logging.error("Error resending message twice")
+  else:
+    try:
+      msg.send()
+    except DeadlineExceededError:
+      send_message(msg, count + 1)
     
 
