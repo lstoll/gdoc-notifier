@@ -9,7 +9,7 @@ from ragendja.auth.urls import urlpatterns as auth_patterns
 urlpatterns = auth_patterns + patterns('',
     (r'^$', 'app.views.index'),
     (r'^authsub_return/', 'app.views.authsub_return'),
-    (r'^poller/', 'app.views.poller'),
+    (r'^poller', 'app.views.poller'),
     (r'^document/(.*)', 'app.views.document'),
     
     # Example:
